@@ -20,7 +20,7 @@ TCML是HTML的扩展版，语法参考Vue。
 
 attr若为静态数据，默认会当做str解析。  
 若那个值是一个Object，则遵循以下语法:  
-`k:v,k2:v2,k3:'strValue'` 
+`k:v,k2:v2,k3:'strValue'`
 若是一个列表，则遵循以下语法:  
 `v1,v2,v3,'strValue'`
 
@@ -76,6 +76,7 @@ attr若为静态数据，默认会当做str解析。
 
 - 默认 默认字体
 - `<unifont>` Unifont字体
+- `<uniform>` 同上
 - `<alt>` 标准银河字母
 - `<illageralt>` Minecraft Dungeons中使用的符文字体
 
@@ -123,6 +124,10 @@ attr若为静态数据，默认会当做str解析。
 
 [敬请参阅](https://zh.minecraft.wiki/w/Tutorial:%E6%96%87%E6%9C%AC%E7%BB%84%E4%BB%B6#%E6%8C%89%E9%94%AE%E9%94%AE%E4%BD%8D%EF%BC%9Akeybind)
 
+### `utranslate`
+
+- `key` 本地化键名
+
 ### `nbt`
 
 - `nbt` NBT路径
@@ -142,6 +147,5 @@ attr若为静态数据，默认会当做str解析。
 3. `action:change_page` 跳转页码
 4. `action:suggest_command` 输入指令至聊天框
 5. `action:copy_to_clipboard` 复制值到剪贴板
-- `value` `action`的值
 
 [敬请参阅](https://zh.minecraft.wiki/w/Tutorial:%E6%96%87%E6%9C%AC%E7%BB%84%E4%BB%B6#%E7%82%B9%E5%87%BB%E4%BA%8B%E4%BB%B6%EF%BC%9AclickEvent)
