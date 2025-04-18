@@ -42,6 +42,7 @@ attr若为静态数据，默认会当做str解析。
 - `<utranslate>`
 - `<nbt>`
 - `<click>`
+- `<reset>`
 
 #### text系
 

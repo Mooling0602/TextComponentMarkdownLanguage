@@ -52,6 +52,8 @@ class TCMLQuickElements(TCMLQuickElement, Enum):
     uniform = {'baseElement': 'text', 'specifyAttrs': {'font': 'uniform'}}
     alt = {'baseElement': 'text', 'specifyAttrs': {'font': 'alt'}}
     illageralt = {'baseElement': 'text', 'specifyAttrs': {'font': 'illageralt'}}
+    # region misc
+    reset = {'baseElement': 'text', 'specifyAttrs': {'color': 'white', 'style': '', 'font': 'uniform'}}
 
 
 tagNameToElement = {}

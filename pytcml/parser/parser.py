@@ -21,6 +21,7 @@ class TCML_HTMLParser(HTMLParser):
         self.tagStack = deque()
         self.styleStack = deque([Style()])
         self.attrStack = deque()
+        self.tagCheckStack = deque()
 
         self.inRaw = False
         self.rawStartDepth = -1
@@ -28,16 +29,18 @@ class TCML_HTMLParser(HTMLParser):
 
         self.parsedContents: list[UnparsedTextComponent] = []
 
-    def tagStackPush(self, tag, style, attr):
+    def tagStackPush(self, tag, style, attr, check):
         self.tagStack.append(tag)
         self.styleStack.append(style)
         self.attrStack.append(attr)
+        self.tagCheckStack.append(check)
 
     def tagStackPop(self, tag):
         if not len(self.tagStack) == 0:
             self.styleStack.pop()
             self.attrStack.pop()
-            return self.tagStack.pop()
+            self.tagStack.pop()
+            return self.tagCheckStack.pop()
         else:
             raise TooManyEndTagError(tag)
 
@@ -56,6 +59,7 @@ class TCML_HTMLParser(HTMLParser):
         return result
 
     def handle_starttag(self, tag, attrs):
+        rtag = tag
         self.depth += 1
         if DEBUG:
             print(f"{'(raw)' if self.inRaw else ''} Start tag: {tag} with depth: {self.depth} & {self.rawStartDepth}")
@@ -65,6 +69,26 @@ class TCML_HTMLParser(HTMLParser):
             return
 
         style = Style()
+
+        # 处理标签名
+        # 快速标签应用
+        tag: TCMLElements | TCMLQuickElements = tagNameToElement.get(tag, None)
+        if not tag:
+            raise NotExistsTagError(rtag)
+        tName = ""
+        if isinstance(tag, TCMLQuickElement):
+            tName = tag.value['baseElement']
+            if tag.value.get('specifyAttrs'):
+                attrsAsDict = dict(attrs)
+                attrsAsDict.update(tag.value.get('specifyAttrs'))
+                attrs = list(attrsAsDict.items())
+                # 同时需要更新一下style
+                for k, v in attrs:
+                    setattr(style, k, v)
+        elif isinstance(tag, TCMLElement):
+            tName = tag.value['element']
+        else:
+            raise BadTagError(tagName)
 
         for attr, value in attrs:
             match attr:
@@ -79,7 +103,7 @@ class TCML_HTMLParser(HTMLParser):
                 case 'font':
                     style.font = value
 
-        self.tagStackPush(tag, style, attrs)
+        self.tagStackPush(tName, style, attrs, rtag)
 
     def handle_endtag(self, tag):
         self.depth -= 1
@@ -98,8 +122,8 @@ class TCML_HTMLParser(HTMLParser):
                 self.rawDatas += f"<{tag}>"
                 return
 
-        tagName = self.tagStackPop(tag)
-        if tag != tagName:
+        tagName: str = self.tagStackPop(tag)
+        if tagName != tag:
             raise BadEndTagError(tag)
 
     def handle_data(self, data):
@@ -111,26 +135,8 @@ class TCML_HTMLParser(HTMLParser):
     def pushContent(self, data):
         tagName, _, attrs = self.peekTagStack()
         style = self.getStyle()
-        # 快速标签应用
-        tag: TCMLElements | TCMLQuickElements = tagNameToElement.get(tagName, None)
-        if not tag:
-            raise NotExistsTagError(tagName)
-        tName = ""
-        if isinstance(tag, TCMLQuickElement):
-            tName = tag.value['baseElement']
-            if tag.value.get('specifyAttrs'):
-                attrsAsDict = dict(attrs)
-                attrsAsDict.update(tag.value.get('specifyAttrs'))
-                attrs = list(attrsAsDict.items())
-                # 同时需要更新一下style
-                for k, v in attrs:
-                    setattr(style, k, v)
-        elif isinstance(tag, TCMLElement):
-            tName = tag.value['element']
-        else:
-            raise BadTagError(tagName)
 
-        self.parsedContents.append(UnparsedTextComponent(tName, attrs, data, style))
+        self.parsedContents.append(UnparsedTextComponent(tagName, attrs, data, style))
 
     def handle_comment(self, data):
         print("Comment  :", data)
@@ -140,7 +146,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = f"<texst raw><text>test</text></texst>"
+f = f"<text><text><aqua><bold>test</bold></aqua>abc</text></text>"
 print(f)
 p.feed(f)
 print(p.parsedContents)
