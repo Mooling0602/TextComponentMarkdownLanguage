@@ -1,0 +1,15 @@
+<line>
+    <text>这是一段
+        <a color=red hover="悬浮提示\nPop Tip">文本</a>
+    </text><text>:</text>
+    <text> </text>
+    <text>Hello, world! </text>
+    <text>{player:name} {player:uuid} </text>
+    <text raw>{player:uuid}</text>
+</line>
+<line>
+    <text>
+        <text hover:entity="type:player,id:uuid,name:'CleMooling'">玩家</text>
+    </text>
+</line>
+
