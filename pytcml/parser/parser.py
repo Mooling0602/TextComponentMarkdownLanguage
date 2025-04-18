@@ -39,7 +39,7 @@ class TCML_HTMLParser(HTMLParser):
             self.attrStack.pop()
             return self.tagStack.pop()
         else:
-            raise TooManyEndTagError(f"Too many end tag: {tag}")
+            raise TooManyEndTagError(tag)
 
     def peekTagStack(self) -> tuple[str, Style, list]:
         return self.tagStack[-1], self.styleStack[-1], self.attrStack[-1]
@@ -100,7 +100,7 @@ class TCML_HTMLParser(HTMLParser):
 
         tagName = self.tagStackPop(tag)
         if tag != tagName:
-            raise BadEndTagError(f"Bad end tag: {tag}")
+            raise BadEndTagError(tag)
 
     def handle_data(self, data):
         if self.inRaw:
@@ -114,7 +114,7 @@ class TCML_HTMLParser(HTMLParser):
         # 快速标签应用
         tag: TCMLElements | TCMLQuickElements = tagNameToElement.get(tagName, None)
         if not tag:
-            raise NotExistsTagError(f"Tag {tagName} not exists.")
+            raise NotExistsTagError(tagName)
         tName = ""
         if isinstance(tag, TCMLQuickElement):
             tName = tag.value['baseElement']
@@ -128,8 +128,7 @@ class TCML_HTMLParser(HTMLParser):
         elif isinstance(tag, TCMLElement):
             tName = tag.value['element']
         else:
-            raise BadTagError(
-                f"Tag {tagName} is not normal element or quick element. It's bug inside pytcml. Report issue.")
+            raise BadTagError(tagName)
 
         self.parsedContents.append(UnparsedTextComponent(tName, attrs, data, style))
 
@@ -141,7 +140,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = f"<text raw><tex2t>test</tex2t></text>"
+f = f"<texst raw><text>test</text></texst>"
 print(f)
 p.feed(f)
 print(p.parsedContents)

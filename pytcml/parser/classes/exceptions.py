@@ -22,7 +22,8 @@ class TagError(ParserError):
 
 
 class BadTagError(TagError):
-    ...
+    def __repr__(self):
+        return super().__repr__()+" It maybe is bug inside pytcml. Report issue."
 
 
 class NotExistsTagError(TagError):
