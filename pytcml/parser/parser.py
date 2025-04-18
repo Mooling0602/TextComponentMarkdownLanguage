@@ -1,4 +1,10 @@
 from html.parser import HTMLParser
+from classes.UnparsedTextComponent import *
+from classes.exceptions import *
+from collections import deque
+from classes.Elements import tagNameToElement, TCMLElement, TCMLQuickElement, TCMLElements, TCMLQuickElements
+from classes.misc import Style
+from dataclasses import fields
 
 
 class TCMLParser:
@@ -9,16 +15,111 @@ class TCML_HTMLParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
 
+        self.depth = 0
+        self.tagStack = deque()
+        self.styleStack = deque([Style()])
+        self.attrStack = deque()
+
+        self.inRaw = False
+        self.rawStartDepth = -1
+        self.rawDatas = ""
+
+        self.parsedContents: list[UnparsedTextComponent] = []
+
+    def tagStackPush(self, tag, style, attr):
+        self.tagStack.append(tag)
+        self.styleStack.append(style)
+        self.attrStack.append(attr)
+
+    def tagStackPop(self, tag):
+        if not len(self.tagStack) == 0:
+            self.styleStack.pop()
+            self.attrStack.pop()
+            return self.tagStack.pop()
+        else:
+            raise TooManyEndTagError(f"Too many end tag: {tag}")
+
+    def peekTagStack(self) -> tuple[str, Style, list]:
+        return self.tagStack[-1], self.styleStack[-1], self.attrStack[-1]
+
+    def getStyle(self) -> Style:
+        # 遍历styleStack
+        result = Style()
+        for singleStyle in self.styleStack:
+            for style in fields(singleStyle):
+                styleName = style.name
+                if getattr(singleStyle, styleName) != None:  # 有被设定的一个style
+                    setattr(result, styleName, getattr(singleStyle, styleName))
+
+        return result
+
     def handle_starttag(self, tag, attrs):
-        print("Start tag:", tag)
-        for attr in attrs:
-            print("     attr:", attr)
+        self.depth += 1
+
+        if self.inRaw:
+            self.rawDatas += self.get_starttag_text()
+            return
+
+        style = Style()
+
+        for attr, value in attrs:
+            match attr:
+                case 'raw':
+                    self.inRaw = True
+                    self.rawStartDepth = self.depth
+                case 'color':
+                    style.color = value
+                case 'style':
+                    for item in value.split(","):
+                        setattr(style, item, True)
+                case 'font':
+                    style.font = value
+
+        if not self.inRaw:
+            self.tagStackPush(tag, style, attrs)
 
     def handle_endtag(self, tag):
-        print("End tag  :", tag)
+        self.depth -= 1
+
+        if self.inRaw:
+            if self.rawStartDepth == self.depth:
+                self.inRaw = False
+                self.rawStartDepth = -1
+            else:
+                self.rawDatas += f"<{tag}>"
+                return
+
+        tagName = self.tagStackPop(tag)
+        if tag != tagName:
+            raise BadEndTagError(f"Bad end tag: {tag}")
 
     def handle_data(self, data):
-        print("Data     :", data)
+        if self.inRaw:
+            self.rawDatas += data
+        else:
+            tagName, _, attrs = self.peekTagStack()
+            style = self.getStyle()
+            # 快速标签应用
+            tag: TCMLElements | TCMLQuickElements = tagNameToElement.get(tagName, None)
+            if not tag:
+                raise NotExistsTagError(f"Tag {tagName} not exists.")
+            tName = ""
+            if isinstance(tag, TCMLQuickElement):
+                tName = tag.value['baseElement']
+                if tag.value.get('specifyAttrs'):
+                    attrsAsDict = dict(attrs)
+                    attrsAsDict.update(tag.value.get('specifyAttrs'))
+                    attrs = list(attrsAsDict.items())
+                    # 同时需要更新一下style
+                    for k, v in attrs:
+                        setattr(style, k, v)
+            elif isinstance(tag, TCMLElement):
+                tName = tag.value['element']
+            else:
+                raise BadTagError(
+                    f"Tag {tagName} is not normal element or quick element. It's bug inside pytcml. Report issue.")
+
+            self.parsedContents.append(UnparsedTextComponent(tName, attrs, data, style))
 
     def handle_comment(self, data):
         print("Comment  :", data)
@@ -28,6 +129,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = "<!DOCTYPE TCMLv0><text :attr:subattr=\"abcd\">hello!</text>"
+f = f"<text raw>hello!<bold color=\"blue\">abc<aqua>yournamehere</aqua></bold>and world</text>"
 print(f)
 p.feed(f)
+print(p.parsedContents)

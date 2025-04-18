@@ -31,7 +31,9 @@ attr若为静态数据，默认会当做str解析。
 
 ### 通用
 
+- `<line>`
 - `<text>`
+- - `<text-hover-text>`
 - `<score>`
 - `<selector>`
 - - `<selector-separator>`
@@ -85,7 +87,7 @@ attr若为静态数据，默认会当做str解析。
 ### 样式
 
 - `color` 指定颜色，值和颜色快速标签兼容
-- `style` 指定样式，值和样式快速标签兼容
+- `style` 指定样式，值和样式快速标签兼容，用逗号分割多个样式
 - `font` 指定字体，值和字体快速标签兼容
 
 ### 悬浮

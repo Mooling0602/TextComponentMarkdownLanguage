@@ -10,7 +10,9 @@ class TCMLQuickElement(TCMLElement):
 
 
 class TCMLElements(TCMLElement, Enum):
-    text = {'element': 'data'}
+    line = {'element': 'line'}
+    text = {'element': 'text'}
+    text_hover_text = {'element': 'text-hover-text'}
     score = {'element': 'score'}
     selector = {'element': 'selector'}
     selecor_separator = {'element': 'selector-separator'}
@@ -50,3 +52,10 @@ class TCMLQuickElements(TCMLQuickElement, Enum):
     uniform = {'baseElement': 'text', 'specifyAttrs': {'font': 'uniform'}}
     alt = {'baseElement': 'text', 'specifyAttrs': {'font': 'alt'}}
     illageralt = {'baseElement': 'text', 'specifyAttrs': {'font': 'illageralt'}}
+
+
+tagNameToElement = {}
+for tag in TCMLElements:
+    tagNameToElement[tag.value['element']] = tag
+for tag in TCMLQuickElements:
+    tagNameToElement[tag.name] = tag
