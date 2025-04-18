@@ -6,6 +6,8 @@ from classes.Elements import tagNameToElement, TCMLElement, TCMLQuickElement, TC
 from classes.misc import Style
 from dataclasses import fields
 
+DEBUG = True
+
 
 class TCMLParser:
     pass
@@ -55,6 +57,8 @@ class TCML_HTMLParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         self.depth += 1
+        if DEBUG:
+            print(f"{'(raw)' if self.inRaw else ''} Start tag: {tag} with depth: {self.depth} & {self.rawStartDepth}")
 
         if self.inRaw:
             self.rawDatas += self.get_starttag_text()
@@ -75,16 +79,21 @@ class TCML_HTMLParser(HTMLParser):
                 case 'font':
                     style.font = value
 
-        if not self.inRaw:
-            self.tagStackPush(tag, style, attrs)
+        self.tagStackPush(tag, style, attrs)
 
     def handle_endtag(self, tag):
         self.depth -= 1
+        if DEBUG:
+            print(f"{'(raw)' if self.inRaw else ''} End tag: {tag} with depth: {self.depth} & {self.rawStartDepth}")
 
         if self.inRaw:
-            if self.rawStartDepth == self.depth:
+            if self.rawStartDepth == self.depth+1:
                 self.inRaw = False
                 self.rawStartDepth = -1
+                if DEBUG:
+                    print("End raw")
+                self.pushContent(self.rawDatas)
+                self.rawDatas = ""
             else:
                 self.rawDatas += f"<{tag}>"
                 return
@@ -97,29 +106,32 @@ class TCML_HTMLParser(HTMLParser):
         if self.inRaw:
             self.rawDatas += data
         else:
-            tagName, _, attrs = self.peekTagStack()
-            style = self.getStyle()
-            # 快速标签应用
-            tag: TCMLElements | TCMLQuickElements = tagNameToElement.get(tagName, None)
-            if not tag:
-                raise NotExistsTagError(f"Tag {tagName} not exists.")
-            tName = ""
-            if isinstance(tag, TCMLQuickElement):
-                tName = tag.value['baseElement']
-                if tag.value.get('specifyAttrs'):
-                    attrsAsDict = dict(attrs)
-                    attrsAsDict.update(tag.value.get('specifyAttrs'))
-                    attrs = list(attrsAsDict.items())
-                    # 同时需要更新一下style
-                    for k, v in attrs:
-                        setattr(style, k, v)
-            elif isinstance(tag, TCMLElement):
-                tName = tag.value['element']
-            else:
-                raise BadTagError(
-                    f"Tag {tagName} is not normal element or quick element. It's bug inside pytcml. Report issue.")
+            self.pushContent(data)
 
-            self.parsedContents.append(UnparsedTextComponent(tName, attrs, data, style))
+    def pushContent(self, data):
+        tagName, _, attrs = self.peekTagStack()
+        style = self.getStyle()
+        # 快速标签应用
+        tag: TCMLElements | TCMLQuickElements = tagNameToElement.get(tagName, None)
+        if not tag:
+            raise NotExistsTagError(f"Tag {tagName} not exists.")
+        tName = ""
+        if isinstance(tag, TCMLQuickElement):
+            tName = tag.value['baseElement']
+            if tag.value.get('specifyAttrs'):
+                attrsAsDict = dict(attrs)
+                attrsAsDict.update(tag.value.get('specifyAttrs'))
+                attrs = list(attrsAsDict.items())
+                # 同时需要更新一下style
+                for k, v in attrs:
+                    setattr(style, k, v)
+        elif isinstance(tag, TCMLElement):
+            tName = tag.value['element']
+        else:
+            raise BadTagError(
+                f"Tag {tagName} is not normal element or quick element. It's bug inside pytcml. Report issue.")
+
+        self.parsedContents.append(UnparsedTextComponent(tName, attrs, data, style))
 
     def handle_comment(self, data):
         print("Comment  :", data)
@@ -129,7 +141,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = f"<text raw>hello!<bold color=\"blue\">abc<aqua>yournamehere</aqua></bold>and world</text>"
+f = f"<text raw><tex2t>test</tex2t></text>"
 print(f)
 p.feed(f)
 print(p.parsedContents)
