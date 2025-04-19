@@ -3,6 +3,7 @@ from classes.UnparsedTextComponent import *
 from classes.exceptions import *
 from collections import deque
 from classes.Elements import tagNameToElement, TCMLElement, TCMLQuickElement, TCMLElements, TCMLQuickElements
+from classes.Attrs import TCMLGenericAttrs
 from classes.misc import Style
 from dataclasses import fields
 
@@ -27,7 +28,13 @@ class TCML_HTMLParser(HTMLParser):
         self.rawStartDepth = -1
         self.rawDatas = ""
 
+        self.inContentProvider = False
+        self.provideStartDepth = -1
+        self.provideContents: list[UnparsedTextComponent] = []
         self.parsedContents: list[UnparsedTextComponent] = []
+
+        if DEBUG:
+            print("START PARSER")
 
     def tagStackPush(self, tag, style, attr, check):
         self.tagStack.append(tag)
@@ -42,10 +49,10 @@ class TCML_HTMLParser(HTMLParser):
             self.tagStack.pop()
             return self.tagCheckStack.pop()
         else:
-            raise TooManyEndTagError(tag)
+            raise TooManyEndTagError(tag, self.getpos())
 
-    def peekTagStack(self) -> tuple[str, Style, list]:
-        return self.tagStack[-1], self.styleStack[-1], self.attrStack[-1]
+    def peekTagStack(self, delta=-1) -> tuple[str, Style, list]:
+        return self.tagStack[delta], self.styleStack[delta], self.attrStack[delta]
 
     def getStyle(self) -> Style:
         # 遍历styleStack
@@ -74,7 +81,7 @@ class TCML_HTMLParser(HTMLParser):
         # 快速标签应用
         tag: TCMLElements | TCMLQuickElements = tagNameToElement.get(tag, None)
         if not tag:
-            raise NotExistsTagError(rtag)
+            raise NotExistsTagError(rtag, self.getpos())
         tName = ""
         if isinstance(tag, TCMLQuickElement):
             tName = tag.value['baseElement']
@@ -88,13 +95,23 @@ class TCML_HTMLParser(HTMLParser):
         elif isinstance(tag, TCMLElement):
             tName = tag.value['element']
         else:
-            raise BadTagError(tagName)
+            raise BadTagError(tagName, self.getpos())
+
+        if tag.value.get('dataProvider', False):
+            if self.inContentProvider:
+                raise ProviderTagInProviderTagError(tName, self.getpos())
+            self.inContentProvider = True
+            self.provideStartDepth = self.depth
+            if DEBUG:
+                print(f"IN provide: {self.depth}")
 
         for attr, value in attrs:
             match attr:
                 case 'raw':
                     self.inRaw = True
                     self.rawStartDepth = self.depth
+                    if DEBUG:
+                        print(f"IN raw: {self.depth}")
                 case 'color':
                     style.color = value
                 case 'style':
@@ -104,6 +121,10 @@ class TCML_HTMLParser(HTMLParser):
                     style.font = value
 
         self.tagStackPush(tName, style, attrs, rtag)
+
+        if not self.inContentProvider:
+            if tag.value.get('asProviderTarget', False):  # 插入一个空的tc
+                self.pushContent("")
 
     def handle_endtag(self, tag):
         self.depth -= 1
@@ -121,10 +142,30 @@ class TCML_HTMLParser(HTMLParser):
             else:
                 self.rawDatas += f"<{tag}>"
                 return
+        elif self.inContentProvider:
+            if self.provideStartDepth == self.depth+1:
+                self.inContentProvider = False
+                self.provideStartDepth = -1
+                if DEBUG:
+                    print(f"End Content provider with contents: {self.provideContents} and at end tag:{tag}")
+                self.parsedContents[-1].attrs
+                # 1. 检查target
+                trName, _, _ = self.peekTagStack(-2)
+                tagAsEnum: TCMLElements | TCMLQuickElements = tagNameToElement.get(tag, None)
+                # if tagAsEnum.value.get('element', '???') == tag:
+                #     pass
+                if tagAsEnum.value.get("provideTarget", "undefined") != trName:
+                    raise ProviderTagInWrongParentTagError(
+                        trName, tagAsEnum.value.get("provideTarget", "???"), self.getpos())
+                # 2. 写入attr
+                attrsAsDict = dict(self.parsedContents[-1].attrs)
+                attrsAsDict[tagAsEnum.value.get('provideAttr', 'providedContent')] = self.provideContents
+                self.parsedContents[-1].attrs = list(attrsAsDict.items())
+                self.provideContents = []
 
         tagName: str = self.tagStackPop(tag)
         if tagName != tag:
-            raise BadEndTagError(tag)
+            raise BadEndTagError(tag, self.getpos())
 
     def handle_data(self, data):
         if self.inRaw:
@@ -136,7 +177,10 @@ class TCML_HTMLParser(HTMLParser):
         tagName, _, attrs = self.peekTagStack()
         style = self.getStyle()
 
-        self.parsedContents.append(UnparsedTextComponent(tagName, attrs, data, style))
+        if self.inContentProvider:
+            self.provideContents.append(UnparsedTextComponent(tagName, attrs, data, style))
+        else:
+            self.parsedContents.append(UnparsedTextComponent(tagName, attrs, data, style))
 
     def handle_comment(self, data):
         print("Comment  :", data)
@@ -146,7 +190,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = f"<text><text><aqua><bold>test</bold></aqua>abc</text></text>"
+f = f"<text><selector><selector-separator>aaa</selector-separator></selector></text>"
 print(f)
 p.feed(f)
 print(p.parsedContents)

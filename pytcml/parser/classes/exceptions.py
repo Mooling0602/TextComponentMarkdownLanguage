@@ -28,3 +28,21 @@ class BadTagError(TagError):
 
 class NotExistsTagError(TagError):
     ...
+
+
+class ProviderTagInProviderTagError(TagError):
+    ...
+
+
+class ProviderTagInWrongParentTagError(TagError):
+    ...
+
+# region tagError/attrError
+
+
+class AttrError(TagError):
+    ...
+
+
+class TooManySubAttrError(AttrError):
+    ...

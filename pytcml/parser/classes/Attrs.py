@@ -1,8 +1,37 @@
 from enum import Enum
+from .exceptions import *
+
+
+class AttrInvalid:
+    ...
 
 
 class TCMLAttr:
-    pass
+    def valid(self, attrName: str, value: any) -> AttrInvalid | object:
+        if attrName.startswith(":"):
+            attrName = attrName[1:]
+        attrNames = attrName.split(":")
+        if len(attrNames) > 2:
+            raise TooManySubAttrError(len(attrNames))
+        for attr in self:
+            if attr.name == attrNames[0]:
+                if len(attrNames) == 1:
+                    if isinstance(value, attr.value.get('type', object)):
+                        return value
+                    return AttrInvalid
+                elif len(attrNames) == 2:
+                    # 匹配sub
+                    resolvedSubAttrs = []
+                    for name, value in attr.value['subs']:
+                        if name == attrName[1]:
+                            resolvedSubAttrs.append([name, value.get('priority', 0), value.get('type', object)])
+                    resolvedSubAttrs.sort(key=lambda item: item[1], reverse=True)
+                    if isinstance(value, resolvedSubAttrs[0][2]):
+                        return value
+                    else:
+                        return AttrInvalid
+                else:
+                    raise TooManySubAttrError(len(attrNames))
 
 
 class TCMLGenericAttrs(TCMLAttr, Enum):
