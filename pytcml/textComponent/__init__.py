@@ -4,6 +4,21 @@ from enum import Enum
 from typing import Optional
 
 
+def get_snbt_str(data: dict) -> str:
+    def dict_to_snbt(d):
+        items = []
+        for k, v in d.items():
+            key = f"'{k}'" if " " in k or not k.isalnum() else k
+            if isinstance(v, dict):
+                value = dict_to_snbt(v)
+            elif isinstance(v, str):
+                value = f"'{v}'"
+            else:
+                value = str(v)
+            items.append(f"{key}:{value}")
+        return "{" + ",".join(items) + "}"
+    return dict_to_snbt(data)
+
 class TextComponentType(Enum):
     JSON = "json"
     SNBT = "snbt"
@@ -18,18 +33,21 @@ class TextComponentBase:
 
 
 class TextColor(TextColorBase):
-    def get_color(self, obj, fallback=None):
+    def __init__(self, obj, fallback=None):
         if isinstance(obj, TextColor):
-            return obj
+            self.value = obj
+            return
         if isinstance(obj, str):
             try:
                 color = TextColorHex(obj)
-                return color
+                self.value = color.value
+                return
             except ValueError:
                 for i in TextColorSimple:
                     if i.value.get("color", None) == obj:
-                        return i
-        return fallback
+                        self.value = i
+                        return
+        self.value = fallback
 
 
 class TextColorSimple(TextColorBase, Enum):
@@ -53,10 +71,9 @@ class TextColorSimple(TextColorBase, Enum):
 
 class TextColorHex(TextColorBase):
     def __init__(self, hex: str):
-        self.hex = hex
-        if not hex.startswith("#") and len(hex) == 7:
+        if not hex.startswith("#") or len(hex) != 7:
             raise ValueError('invalid hex color.')
-        return {"color": hex}
+        self.value = {"color": hex}
 
 
 class hoverAction(Enum):
@@ -94,9 +111,13 @@ class TextComponent(TextComponentBase):
                     result = str(dict_component).replace("'", '"')
                     return result
             case TextComponentType.SNBT:
-                pass
+                dict_component.update(text=self.text)
+                if self.color is not None:
+                    dict_component.update(self.color.value)
+                    result = get_snbt_str(dict_component)
+                    return result
             case _:
                 raise ValueError(f"Unsupported text component type: {self.type}")
 
 
-print(TextComponent(type=TextComponentType.SNBT, text="测试", color=TextColorSimple.red).to_str())
+print(TextComponent(type=TextComponentType.SNBT, text="测试", color=TextColor("#442333")).to_str())
