@@ -119,7 +119,10 @@ class TCML_HTMLParser(HTMLParser):
                     style.color = value
                 case 'style':
                     for item in value.split(","):
-                        setattr(style, item, True)
+                        if item.strip() == 'reset':
+                            style = Style('white', 'uniform', False, False, False, False, False)
+                        else:
+                            setattr(style, item.strip(), True)
                 case 'font':
                     style.font = value
 
@@ -193,7 +196,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = f"<text><selector b><selector-separator>aaa</selector-separator></selector></text>"
+f = f"<text><aqua><bold>AQUA AND BOLD </bold>AQUA<bold><reset> RESET</reset></bold></aqua></text>"
 print(f)
 p.feed(f)
 print(p.parsedContents)
