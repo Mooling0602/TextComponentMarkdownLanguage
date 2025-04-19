@@ -7,7 +7,7 @@ class AttrInvalid:
 
 
 class TCMLAttr:
-    def valid(self, attrName: str, value: any) -> AttrInvalid | object:
+    def valid(self, attrName: str, value: any) -> AttrInvalid | tuple[str, object]:
         if attrName.startswith(":"):
             attrName = attrName[1:]
         attrNames = attrName.split(":")
@@ -17,21 +17,25 @@ class TCMLAttr:
             if attr.name == attrNames[0]:
                 if len(attrNames) == 1:
                     if isinstance(value, attr.value.get('type', object)):
-                        return value
+                        return attrName, value
                     return AttrInvalid()
                 elif len(attrNames) == 2:
                     # 匹配sub
                     resolvedSubAttrs = []
-                    for name, value in attr.value['subs']:
-                        if name == attrName[1]:
-                            resolvedSubAttrs.append([name, value.get('priority', 0), value.get('type', object)])
+                    for name, subAttrValue in attr.value['subs'].items():
+                        if name == attrNames[1]:
+                            resolvedSubAttrs.append([name, subAttrValue.get('priority', 0),
+                                                    subAttrValue.get('type', object)])
                     resolvedSubAttrs.sort(key=lambda item: item[1], reverse=True)
+                    if len(resolvedSubAttrs) == 0:
+                        return AttrInvalid()
                     if isinstance(value, resolvedSubAttrs[0][2]):
-                        return value
+                        return attrNames[0]+":"+resolvedSubAttrs[0][0], value
                     else:
                         return AttrInvalid()
                 else:
                     raise TooManySubAttrError(len(attrNames))
+        return AttrInvalid()
 
 
 class TCMLGenericAttrs(TCMLAttr, Enum):

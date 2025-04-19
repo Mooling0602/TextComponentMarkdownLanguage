@@ -104,12 +104,22 @@ class TCML_HTMLParser(HTMLParser):
 
         attrList = [TCMLGenericAttrs]
         attrList.append(tag.value.get('attrs', TCMLGenericAttrs)) if tag.value.get('attrs', None) else None
+        outAttrs = []
+        isAttrValid = False
         for attr, value in attrs:
             for attrsWillCheck in attrList:
-                result = TCMLGenericAttrs.valid(attrsWillCheck, attr, value)
-                if isinstance(result, AttrInvalid):
+                validResult = TCMLGenericAttrs.valid(attrsWillCheck, attr, value)
+                if isinstance(validResult, AttrInvalid):
                     warnings.warn(attr, BadAttrWarning)
-            match attr:
+                    isAttrValid = False
+                    break
+                else:
+                    name, result = validResult
+                    isAttrValid = True
+                    break
+            if not isAttrValid:
+                continue
+            match name:
                 case 'raw':
                     self.inRaw = True
                     self.rawStartDepth = self.depth
@@ -125,8 +135,13 @@ class TCML_HTMLParser(HTMLParser):
                             setattr(style, item.strip(), True)
                 case 'font':
                     style.font = value
+                case _:
+                    itemWillAppend = (name, result)
+                    if not itemWillAppend in outAttrs:
+                        outAttrs.append(itemWillAppend)
+            isAttrValid = False
 
-        self.tagStackPush(tName, style, attrs, rtag)
+        self.tagStackPush(tName, style, outAttrs, rtag)
 
         if not self.inContentProvider:
             if tag.value.get('asProviderTarget', False):  # 插入一个空的tc
@@ -196,7 +211,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = f"<text><aqua><bold>AQUA AND BOLD </bold>AQUA<bold><reset> RESET</reset></bold></aqua></text>"
+f = '<text hover:text="hello">Hover on me!</text>'
 print(f)
 p.feed(f)
 print(p.parsedContents)
