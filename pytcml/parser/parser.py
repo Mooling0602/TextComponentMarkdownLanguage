@@ -3,9 +3,10 @@ from classes.UnparsedTextComponent import *
 from classes.exceptions import *
 from collections import deque
 from classes.Elements import tagNameToElement, TCMLElement, TCMLQuickElement, TCMLElements, TCMLQuickElements
-from classes.Attrs import TCMLGenericAttrs
+from classes.Attrs import TCMLGenericAttrs, AttrInvalid
 from classes.misc import Style
 from dataclasses import fields
+import warnings
 
 DEBUG = True
 
@@ -105,7 +106,13 @@ class TCML_HTMLParser(HTMLParser):
             if DEBUG:
                 print(f"IN provide: {self.depth}")
 
+        attrList = [TCMLGenericAttrs]
+        attrList.append(tag.value.get('attrs', TCMLGenericAttrs)) if tag.value.get('attrs', None) else None
         for attr, value in attrs:
+            for attrsWillCheck in attrList:
+                result = TCMLGenericAttrs.valid(attrsWillCheck, attr, value)
+                if isinstance(result, AttrInvalid):
+                    warnings.warn(attr, BadAttrWarning)
             match attr:
                 case 'raw':
                     self.inRaw = True
@@ -190,7 +197,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = f"<text><selector><selector-separator>aaa</selector-separator></selector></text>"
+f = f"<text><selector b><selector-separator>aaa</selector-separator></selector></text>"
 print(f)
 p.feed(f)
 print(p.parsedContents)

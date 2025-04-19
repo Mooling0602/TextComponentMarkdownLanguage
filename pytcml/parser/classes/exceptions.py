@@ -46,3 +46,9 @@ class AttrError(TagError):
 
 class TooManySubAttrError(AttrError):
     ...
+
+# region warning
+
+
+class BadAttrWarning(Warning):
+    ...

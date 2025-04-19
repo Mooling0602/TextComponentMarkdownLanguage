@@ -18,7 +18,7 @@ class TCMLAttr:
                 if len(attrNames) == 1:
                     if isinstance(value, attr.value.get('type', object)):
                         return value
-                    return AttrInvalid
+                    return AttrInvalid()
                 elif len(attrNames) == 2:
                     # 匹配sub
                     resolvedSubAttrs = []
@@ -29,7 +29,7 @@ class TCMLAttr:
                     if isinstance(value, resolvedSubAttrs[0][2]):
                         return value
                     else:
-                        return AttrInvalid
+                        return AttrInvalid()
                 else:
                     raise TooManySubAttrError(len(attrNames))
 
