@@ -1,4 +1,5 @@
 from enum import Enum
+from .Attrs import *
 
 
 class TCMLElement:
@@ -11,16 +12,18 @@ class TCMLQuickElement(TCMLElement):
 
 class TCMLElements(TCMLElement, Enum):
     line = {'element': 'line'}
-    text = {'element': 'text'}
-    text_hover_text = {'element': 'text-hover-text'}
-    score = {'element': 'score'}
-    selector = {'element': 'selector'}
-    selecor_separator = {'element': 'selector-separator'}
-    keybind = {'element': 'keybind'}
-    translate = {'element': 'translate'}
-    utranslate = {'element': 'utranslate'}
-    nbt = {'element': 'nbt'}
-    click = {'element': 'click'}
+    text = {'element': 'text', 'asProviderTarget': True}
+    text_hover_text = {'element': 'text-hover-text', 'dataProvider': True,
+                       'provideTarget': 'text', 'provideAttr': 'hover:text'}
+    score = {'element': 'score', 'attrs': TCMLScoreAttrs, 'asProviderTarget': True}
+    selector = {'element': 'selector', 'attrs': TCMLSelectorAttrs, 'asProviderTarget': True}
+    selecor_separator = {'element': 'selector-separator',
+                         'dataProvider': True, 'provideTarget': 'selector', 'provideAttr': 'selector'}
+    keybind = {'element': 'keybind', 'attrs': TCMLKeybindAttrs}
+    translate = {'element': 'translate', 'attrs': TCMLTranslateAttrs}
+    utranslate = {'element': 'utranslate', 'attrs': TCMLuTranslateAttrs}
+    nbt = {'element': 'nbt', 'attrs': TCMLNBTAttrs}
+    click = {'element': 'click', 'attrs': TCMLClickAttrs}
 
 
 class TCMLQuickElements(TCMLQuickElement, Enum):
