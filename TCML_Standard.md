@@ -102,6 +102,8 @@ attr若为静态数据，默认会当做str解析。
 ### 技术型
 
 - `raw` 若此attr存在(值任意，可不带值存在)，将不继续解析此标签里面的标签，而是作为文本直接输出
+- `if` 此attr代表一个Python值，若其为True，则最后渲染出此标签，反之亦然
+- `for` 此attr内容为一段字符串，语法类似: `item in items`、`(item, index) in items`、`(item, name, index) in items`，可以多次渲染同样的标签但是有不同的内容
 
 ## 标签特定 attr
 
