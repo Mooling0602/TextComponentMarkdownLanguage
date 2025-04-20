@@ -103,6 +103,8 @@ attr若为静态数据，默认会当做str解析。
 
 - `raw` 若此attr存在(值任意，可不带值存在)，将不继续解析此标签里面的标签，而是作为文本直接输出
 - `if` 此attr代表一个Python值，若其为True，则最后渲染出此标签，反之亦然
+- `else-if` 此attr也代表一个Python值，但是其前面必须紧挨一个带`if`或`else-if` attr的标签，若前面的`if`和`else-if`都没有匹配到，则匹配此标签，如果结果为`True`，则渲染此标签并从此处停止条件渲染解析
+- `else` 此attr存在时，其前面必须紧挨一个带`if`或者`else-if`的标签，如果`if`和`else-if`都没有匹配到，则渲染此标签
 - `for` 此attr内容为一段字符串，语法类似: `item in items`、`(item, index) in items`、`(item, name, index) in items`，可以多次渲染同样的标签但是有不同的内容
 
 ## 标签特定 attr

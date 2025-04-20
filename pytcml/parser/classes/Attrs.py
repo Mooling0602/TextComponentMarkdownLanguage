@@ -38,9 +38,10 @@ class TCMLAttr:
         if len(attrNames) > 2:
             raise TooManySubAttrError(len(attrNames))
         for attr in self:  # 遍历自身的所有attr
-            registeredAttrName = attr.name  # 处理那些与保留关键字相同的attrName
+            registeredAttrName: str = attr.name  # 处理那些与保留关键字相同的attrName
             if registeredAttrName.startswith("_"):
                 registeredAttrName = registeredAttrName[1:]
+            registeredAttrName.replace("_", "-")  # 替换下划线
             # 如果偷懒没写name...
             if registeredAttrName == attrNames[0] and attr.value.get('name', attrNames[0]) == attrNames[0]:
                 if len(attrNames) == 1:  # 没有sub
@@ -110,6 +111,8 @@ class TCMLGenericAttrs(TCMLAttr, Enum):
     raw = {'name': 'raw'}
     _if = {'name': 'if', 'type': str}
     _for = {'name': 'for', 'type': str}
+    else_if = {'name': 'else-if', 'type': str}
+    _else = {'name': 'else'}
 
 
 class TCMLScoreAttrs(TCMLAttr, Enum):
