@@ -1,9 +1,27 @@
 from enum import Enum
 from .exceptions import *
+import warnings
+import re
 
 
 class AttrInvalid:
     ...
+
+
+def strToList(value: str) -> list:
+    values = re.split(r'(?!\\),', value)
+    return values
+
+
+def strToDict(value: str) -> dict:
+    KVs = strToList(value)
+    result = {}
+    for KV in KVs:
+        splitedKV = re.split(r'(?!\\):', KV)
+        if len(splitedKV) != 2:
+            return False
+        result[splitedKV[0].strip()] = splitedKV[1].strip()
+    return result
 
 
 class TCMLAttr:
@@ -14,12 +32,20 @@ class TCMLAttr:
         if len(attrNames) > 2:
             raise TooManySubAttrError(len(attrNames))
         for attr in self:
-            if attr.name == attrNames[0]:
+            registeredAttrName = attr.name
+            if registeredAttrName.startswith("_"):
+                registeredAttrName = registeredAttrName[1:]
+            if registeredAttrName == attrNames[0]:
                 if len(attrNames) == 1:
                     if isinstance(value, attr.value.get('type', object)):
                         return attrName, value
+                    warnings.warn(value, BadAttrTypeWarning)
                     return AttrInvalid()
                 elif len(attrNames) == 2:
+                    if not attr.value.get('subs', None):
+                        warnings.warn(attrNames[1], NoSubAttrWarning)
+                        warnings.warn(value, BadAttrNameWarning)
+                        return AttrInvalid()
                     # 匹配sub
                     resolvedSubAttrs = []
                     for name, subAttrValue in attr.value['subs'].items():
@@ -28,13 +54,24 @@ class TCMLAttr:
                                                     subAttrValue.get('type', object)])
                     resolvedSubAttrs.sort(key=lambda item: item[1], reverse=True)
                     if len(resolvedSubAttrs) == 0:
+                        warnings.warn(value, BadAttrNameWarning)
                         return AttrInvalid()
                     if isinstance(value, resolvedSubAttrs[0][2]):
                         return attrNames[0]+":"+resolvedSubAttrs[0][0], value
+                    elif resolvedSubAttrs[0][2] == list:
+                        return attrNames[0]+":"+resolvedSubAttrs[0][0], strToList(value)
+                    elif resolvedSubAttrs[0][2] == dict:
+                        v = strToDict(value)
+                        if v == False:
+                            warnings.warn(value, BadAttrTypeWarning)
+                            return AttrInvalid()
+                        return attrNames[0]+":"+resolvedSubAttrs[0][0], v
                     else:
+                        warnings.warn(value, BadAttrTypeWarning)
                         return AttrInvalid()
                 else:
                     raise TooManySubAttrError(len(attrNames))
+        warnings.warn(value, BadAttrNameWarning)
         return AttrInvalid()
 
 
@@ -48,6 +85,8 @@ class TCMLGenericAttrs(TCMLAttr, Enum):
         'entity': {'type': dict, 'priority': 10},
     }}
     raw = {}
+    _if = {'type': str}
+    _for = {'type': str}
 
 
 class TCMLScoreAttrs(TCMLAttr, Enum):

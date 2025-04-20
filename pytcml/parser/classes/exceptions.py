@@ -50,5 +50,21 @@ class TooManySubAttrError(AttrError):
 # region warning
 
 
-class BadAttrWarning(Warning):
+class AttrWarning(Warning):
+    ...
+
+
+class BadAttrWarning(AttrWarning):
+    ...
+
+
+class BadAttrTypeWarning(BadAttrWarning):
+    ...
+
+
+class BadAttrNameWarning(BadAttrWarning):
+    ...
+
+
+class NoSubAttrWarning(AttrWarning):
     ...

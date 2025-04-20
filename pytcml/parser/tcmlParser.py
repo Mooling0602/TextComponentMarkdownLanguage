@@ -211,7 +211,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = '<text hover:text="hello">Hover on me!</text>'
+f = '<text hover:item="item:123">Hover on me!</text>'
 print(f)
 p.feed(f)
 print(p.parsedContents)
