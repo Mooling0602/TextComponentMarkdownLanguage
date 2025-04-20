@@ -1,7 +1,8 @@
-from enum import Enum
-from .exceptions import *
-import warnings
 import re
+import warnings
+from enum import Enum
+
+from .exceptions import *
 
 
 class AttrInvalid:

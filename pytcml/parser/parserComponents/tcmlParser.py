@@ -1,21 +1,22 @@
 # 第0步: TCML字符串转list[UnparsedTextComponent]
 
-from html.parser import HTMLParser
-from classes.UnparsedTextComponent import *
-from classes.exceptions import *
-from collections import deque
-from classes.Elements import tagNameToElement, TCMLElements, TCMLQuickElements
-from classes.Attrs import TCMLGenericAttrs, AttrInvalid
-from classes.misc import Style
-from dataclasses import fields
 import warnings
+from collections import deque
+from dataclasses import fields
+from html.parser import HTMLParser
 
-DEBUG = True
+from classes.Attrs import AttrInvalid, TCMLGenericAttrs
+from classes.Elements import TCMLElements, TCMLQuickElements, tagNameToElement
+from classes.exceptions import *
+from classes.misc import Style
+from classes.parserOptions import ParserOption
+from classes.UnparsedTextComponent import *
 
 
 class TCML_HTMLParser(HTMLParser):
-    def __init__(self):
+    def __init__(self, options: ParserOption):
         super().__init__(convert_charrefs=True)
+        self.options = options
 
         # 栈
         self.depth = 0  # 解析深度，用于检查是否闭合特定标签
@@ -35,7 +36,7 @@ class TCML_HTMLParser(HTMLParser):
         # 解析内容
         self.parsedContents: list[UnparsedTextComponent] = []
 
-        if DEBUG:
+        if self.options.outputDebug:
             print("START PARSER")
 
     def tagStackPush(self, tag, style, attr, check):
@@ -70,7 +71,7 @@ class TCML_HTMLParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list):
         rtag: str = tag
         self.depth += 1
-        if DEBUG:
+        if self.options.outputDebug:
             print(f"{'(raw)' if self.inRaw else ''} Start tag: {tag} with depth: {self.depth} & {self.rawStartDepth}")
 
         if self.inRaw:  # 跳过后续解析
@@ -106,7 +107,7 @@ class TCML_HTMLParser(HTMLParser):
                 raise ProviderTagInProviderTagError(tName, self.getpos())
             self.inContentProvider = True
             self.provideStartDepth = self.depth
-            if DEBUG:
+            if self.options.outputDebug:
                 print(f"IN provide: {self.depth}")
 
         attrList = [TCMLGenericAttrs]
@@ -138,7 +139,7 @@ class TCML_HTMLParser(HTMLParser):
                 case 'raw':
                     self.inRaw = True
                     self.rawStartDepth = self.depth
-                    if DEBUG:
+                    if self.options.outputDebug:
                         print(f"IN raw: {self.depth}")
                 case 'color':
                     style.color = value
@@ -166,14 +167,14 @@ class TCML_HTMLParser(HTMLParser):
 
     def handle_endtag(self, tag):
         self.depth -= 1
-        if DEBUG:
+        if self.options.outputDebug:
             print(f"{'(raw)' if self.inRaw else ''} End tag: {tag} with depth: {self.depth} & {self.rawStartDepth}")
 
         if self.inRaw:
             if self.rawStartDepth == self.depth+1:
                 self.inRaw = False
                 self.rawStartDepth = -1
-                if DEBUG:
+                if self.options.outputDebug:
                     print("End raw")
                 self.pushContent(self.rawDatas)
                 self.rawDatas = ""
@@ -184,7 +185,7 @@ class TCML_HTMLParser(HTMLParser):
             if self.provideStartDepth == self.depth+1:
                 self.inContentProvider = False
                 self.provideStartDepth = -1
-                if DEBUG:
+                if self.options.outputDebug:
                     print(f"End Content provider with contents: {self.provideContents} and at end tag:{tag}")
                 self.parsedContents[-1].attrs
                 # 1. 检查target
