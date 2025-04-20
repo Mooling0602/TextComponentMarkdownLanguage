@@ -151,7 +151,7 @@ attr若为静态数据，默认会当做str解析。
 
 1. `action:open_url` 打开网页
 2. `action:run_command` 运行指令
-3. `action:change_page` 跳转页码
+3. `action:change_page` 跳转页码 (实际在聊天里没什么用就是了)
 4. `action:suggest_command` 输入指令至聊天框
 5. `action:copy_to_clipboard` 复制值到剪贴板
 

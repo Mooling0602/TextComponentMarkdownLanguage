@@ -22,3 +22,11 @@ class Style:
         result = result[:-1]
         result += ")"
         return result
+
+
+@dataclass
+class ClickAndHover:
+    clickType: str | None = None
+    clickValue: str | None = None
+    hoverType: str | None = None
+    hoverValue: str | dict | None = None

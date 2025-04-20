@@ -32,7 +32,7 @@ def isInstanceOfAny(value, types):
 
 
 class TCMLAttr:
-    def valid(self: 'TCMLAttr | Enum', attrName: str, value: object) -> AttrInvalid | tuple[str, object]:
+    def valid(self: 'TCMLAttr | Enum', attrName: str, value: object, dropWarnings: bool = True) -> AttrInvalid | tuple[str, object]:
         if attrName.startswith(":"):  # 处理动态绑定
             attrName = attrName[1:]
         attrNames = attrName.split(":")  # 分开sub attr
@@ -44,16 +44,20 @@ class TCMLAttr:
                 registeredAttrName = registeredAttrName[1:]
             registeredAttrName.replace("_", "-")  # 替换下划线
             # 如果偷懒没写name...
+            print(attrNames, registeredAttrName, attr.value.get('name'))
             if registeredAttrName == attrNames[0] and attr.value.get('name', attrNames[0]) == attrNames[0]:
                 if len(attrNames) == 1:  # 没有sub
                     if isInstanceOfAny(value, attr.value.get('type', object)):
                         return attrName, value
-                    warnings.warn(str(value), BadAttrTypeWarning)
+                    if dropWarnings:
+                        warnings.warn(str(value), BadAttrTypeWarning)
                     return AttrInvalid()
                 elif len(attrNames) == 2:  # 有sub
                     if not attr.value.get('subs', None):  # 但是那个attr没有sub
-                        warnings.warn(attrNames[1], NoSubAttrWarning)
-                        warnings.warn(str(value), BadAttrNameWarning)
+                        if dropWarnings:
+                            warnings.warn(attrNames[1], NoSubAttrWarning)
+                        if dropWarnings:
+                            warnings.warn(str(value), BadAttrNameWarning)
                         return AttrInvalid()
                     # 匹配sub
                     resolvedSubAttrs = []
@@ -63,7 +67,8 @@ class TCMLAttr:
                                                     subAttrValue.get('type', object)])  # sub名称, 优先级, sub类型
                     resolvedSubAttrs.sort(key=lambda item: item[1], reverse=True)  # 按优先级排序
                     if len(resolvedSubAttrs) == 0:  # 没有匹配到sub
-                        warnings.warn(str(value), BadAttrNameWarning)
+                        if dropWarnings:
+                            warnings.warn(str(value), BadAttrNameWarning)
                         return AttrInvalid()
                     if isInstanceOfAny(value, resolvedSubAttrs[0][2]):
                         return attrNames[0]+":"+resolvedSubAttrs[0][0], value
@@ -72,15 +77,18 @@ class TCMLAttr:
                     elif resolvedSubAttrs[0][2] == dict and isinstance(value, str):  # 行内dict
                         v = strToDict(value)
                         if v == False:
-                            warnings.warn(value, BadAttrTypeWarning)
+                            if dropWarnings:
+                                warnings.warn(value, BadAttrTypeWarning)
                             return AttrInvalid()
                         return attrNames[0]+":"+resolvedSubAttrs[0][0], v
                     else:
-                        warnings.warn(str(value), BadAttrTypeWarning)  # 类型不对
+                        if dropWarnings:
+                            warnings.warn(str(value), BadAttrTypeWarning)  # 类型不对
                         return AttrInvalid()
                 else:
                     raise TooManySubAttrError(len(attrNames))
-        warnings.warn(attrName, BadAttrNameWarning)  # 没有匹配到
+        if dropWarnings:
+            warnings.warn(attrName, BadAttrNameWarning)  # 没有匹配到
         return AttrInvalid()
 
 
@@ -114,6 +122,7 @@ class TCMLGenericAttrs(TCMLAttr, Enum):
     _for = {'name': 'for', 'type': str}
     else_if = {'name': 'else-if', 'type': str}
     _else = {'name': 'else'}
+    reset = {'name': 'reset', 'type': bool}
 
 
 class TCMLScoreAttrs(TCMLAttr, Enum):
@@ -151,7 +160,6 @@ class TCMLNBTAttrs(TCMLAttr, Enum):
 
 
 class TCMLClickAttrs(TCMLAttr, Enum):
-    _value = {'name': 'value', 'type': str}
     action = {'name': 'action', 'type': None, 'subs': {
         'open_url': {'type': str, 'priority': 100},
         'run_command': {'type': str, 'priority': 80},

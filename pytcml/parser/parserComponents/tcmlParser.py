@@ -5,10 +5,10 @@ from collections import deque
 from dataclasses import fields
 from html.parser import HTMLParser
 
-from classes.Attrs import AttrInvalid, TCMLGenericAttrs
+from classes.Attrs import AttrInvalid, TCMLGenericAttrs, TCMLAttr
 from classes.Elements import TCMLElements, TCMLQuickElements, tagNameToElement
 from classes.exceptions import *
-from classes.misc import Style
+from classes.misc import Style, ClickAndHover
 from classes.parserOptions import ParserOption
 from classes.UnparsedTextComponent import *
 
@@ -21,7 +21,7 @@ class TCML_HTMLParser(HTMLParser):
         # 栈
         self.depth = 0  # 解析深度，用于检查是否闭合特定标签
         self.tagStack: deque[str] = deque()  # 检查标签是否配对
-        self.styleStack: deque[Style] = deque([Style().reset()])  # 继承style
+        self.styleStack: deque[Style] = deque()  # 继承style
         self.attrStack: deque[list[tuple | list]] = deque()  # 我也不知道啥用处，留着吧
         self.tagCheckStack: deque[str] = deque()  # 和tagStack一样，但是它里面留的是原始标签名
 
@@ -68,6 +68,35 @@ class TCML_HTMLParser(HTMLParser):
 
         return result
 
+    def getClickAndHover(self) -> ClickAndHover:
+        # 遍历attr
+        clickAndHoverStack: deque[ClickAndHover] = deque()
+        # 处理click/hover
+        for attrs in self.attrStack:
+            cah: ClickAndHover = ClickAndHover()
+            for attr, value in attrs:
+                if attr.startswith(":"):
+                    attr = attr[1:]
+                attrNames = attr.split(":")
+                if attrNames[0] == 'hover':
+                    cah.hoverType = attrNames[1]
+                    cah.hoverValue = value
+                elif attrNames[0] == 'action':
+                    cah.clickType = attrNames[1]
+                    cah.clickValue = value
+            clickAndHoverStack.append(cah)
+
+        # 合并
+        result = ClickAndHover()
+        for singleCAH in clickAndHoverStack:
+            if singleCAH.clickType:
+                result.clickType = singleCAH.clickType
+                result.clickValue = singleCAH.clickValue
+            if singleCAH.hoverType:
+                result.hoverType = singleCAH.hoverType
+                result.hoverValue = singleCAH.hoverValue
+        return result
+
     def handle_starttag(self, tag: str, attrs: list):
         rtag: str = tag
         self.depth += 1
@@ -110,9 +139,9 @@ class TCML_HTMLParser(HTMLParser):
             if self.options.outputDebug:
                 print(f"IN provide: {self.depth}")
 
-        attrList = [TCMLGenericAttrs]
+        attrList: list[type[TCMLGenericAttrs] | type[TCMLAttr]] = [TCMLGenericAttrs]
         attrsValue = tagAsEnum.value.get('attrs', None)
-        if isinstance(attrsValue, type) and issubclass(attrsValue, TCMLGenericAttrs):
+        if isinstance(attrsValue, type) and issubclass(attrsValue, TCMLAttr):
             attrList.append(attrsValue)
         outAttrs = []
         isAttrValid = False
@@ -120,11 +149,12 @@ class TCML_HTMLParser(HTMLParser):
         result = None
         for attr, value in attrs:
             for index, attrsWillCheck in enumerate(attrList):
-                validResult = TCMLGenericAttrs.valid(attrsWillCheck, attr, value)  # type: ignore
+                dropWarnings = not index != len(attrList)-1
+                validResult = TCMLGenericAttrs.valid(attrsWillCheck, attr, value, dropWarnings)  # type: ignore
                 if isinstance(validResult, AttrInvalid):
-                    warnings.warn(attr, BadAttrWarning)
-                    if index != len(attrsWillCheck)-1:
+                    if index != len(attrList)-1:  # type: ignore
                         continue  # 还没有检查完
+                    warnings.warn(attr, BadAttrWarning)
                     isAttrValid = False
                     break
                 else:
@@ -141,6 +171,9 @@ class TCML_HTMLParser(HTMLParser):
                     self.rawStartDepth = self.depth
                     if self.options.outputDebug:
                         print(f"IN raw: {self.depth}")
+                    itemWillAppend = ('raw', True)
+                    if not itemWillAppend in outAttrs:
+                        outAttrs.append(itemWillAppend)
                 case 'color':
                     style.color = value
                 case 'style':
@@ -157,8 +190,6 @@ class TCML_HTMLParser(HTMLParser):
                         outAttrs.append(itemWillAppend)
             isAttrValid = False
             name = None
-            result = None
-
         self.tagStackPush(tName, style, outAttrs, rtag)
 
         if not self.inContentProvider:
@@ -201,6 +232,8 @@ class TCML_HTMLParser(HTMLParser):
                 attrsAsDict[tagAsEnum.value.get('provideAttr', 'providedContent')] = self.provideContents
                 self.parsedContents[-1].attrs = list(attrsAsDict.items())
                 self.provideContents = []
+                # 2.2 写入attrStack的attr
+                self.attrStack[self.depth-1] = list(attrsAsDict.items())
 
         tagName: str = self.tagStackPop(tag)
         if tagName != tag:
@@ -215,6 +248,27 @@ class TCML_HTMLParser(HTMLParser):
     def pushContent(self, data):
         tagName, _, attrs = self.peekTagStack()
         style = self.getStyle()
+        # 处理hover和click
+        cah: ClickAndHover = self.getClickAndHover()
+        if cah.clickType or cah.hoverType:
+            # 合入attr (前提是不存在对应attr)
+            existHover: bool = False
+            existClick: bool = False
+            for attr, value in attrs:
+                if attr.startswith(":"):
+                    attr = attr[1:]
+                attrNames = attr.split(":")
+                if attrNames[0] == 'hover':
+                    existHover = True
+                elif attrNames[1] == 'click':
+                    existClick = True
+            attrsAsDict = dict(attrs)
+            if not existHover and not cah.hoverType is None:
+                # 合并hover
+                attrsAsDict["hover:"+cah.hoverType] = cah.hoverValue
+            if not existClick and not cah.clickType is None:
+                attrsAsDict["click:"+cah.clickType] = cah.clickValue
+            attrs = list(attrsAsDict.items())
 
         if self.inContentProvider:
             self.provideContents.append(UnparsedTextComponent(tagName, attrs, data, style))

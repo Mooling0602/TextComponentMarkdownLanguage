@@ -9,7 +9,7 @@ class TCMLParser:
 o = ParserOption(True)
 
 p = TCML_HTMLParser(o)
-f = '<line raw><alt>你好</alt></line>'
+f = '<click action:open_url="https://yupu.dev"><aqua><text>Hover on me! <text-hover-text>hover</text-hover-text><bold><red>RED and HOVER</red></bold></text></aqua></click>'
 print(f)
 p.feed(f)
 print(p.parsedContents)
