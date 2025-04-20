@@ -44,7 +44,6 @@ class TCMLAttr:
                 registeredAttrName = registeredAttrName[1:]
             registeredAttrName.replace("_", "-")  # 替换下划线
             # 如果偷懒没写name...
-            print(attrNames, registeredAttrName, attr.value.get('name'))
             if registeredAttrName == attrNames[0] and attr.value.get('name', attrNames[0]) == attrNames[0]:
                 if len(attrNames) == 1:  # 没有sub
                     if isInstanceOfAny(value, attr.value.get('type', object)):
