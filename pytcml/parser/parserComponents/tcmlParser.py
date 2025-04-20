@@ -1,3 +1,5 @@
+# 第0步: TCML字符串转list[UnparsedTextComponent]
+
 from html.parser import HTMLParser
 from classes.UnparsedTextComponent import *
 from classes.exceptions import *
@@ -216,7 +218,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = '<line>aaa</line>'
+f = '<line><alt>你好</alt></line>'
 print(f)
 p.feed(f)
 print(p.parsedContents)
