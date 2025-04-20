@@ -3,15 +3,15 @@ from dataclasses import dataclass, fields
 
 @dataclass
 class Style:
-    color: str = None
-    font: str = None
-    bold: bool = None
-    italic: bool = None
-    underlined: bool = None
-    strikethrough: bool = None
-    obfuscated: bool = None
+    color: str | None = None
+    font: str | None = None
+    bold: bool | None = None
+    italic: bool | None = None
+    underlined: bool | None = None
+    strikethrough: bool | None = None
+    obfuscated: bool | None = None
 
-    def reset(self) -> 'Style':
+    def reset(self: 'Style') -> 'Style':
         return Style('white', 'uniform', False, False, False, False, False)
 
     def __repr__(self):

@@ -13,7 +13,7 @@ def strToList(value: str) -> list:
     return values
 
 
-def strToDict(value: str) -> dict:
+def strToDict(value: str) -> dict | bool:
     KVs = strToList(value)
     result = {}
     for KV in KVs:
@@ -31,13 +31,13 @@ def isInstanceOfAny(value, types):
 
 
 class TCMLAttr:
-    def valid(self, attrName: str, value: any) -> AttrInvalid | tuple[str, object]:
+    def valid(self: 'TCMLAttr | Enum', attrName: str, value: object) -> AttrInvalid | tuple[str, object]:
         if attrName.startswith(":"):  # 处理动态绑定
             attrName = attrName[1:]
         attrNames = attrName.split(":")  # 分开sub attr
         if len(attrNames) > 2:
             raise TooManySubAttrError(len(attrNames))
-        for attr in self:  # 遍历自身的所有attr
+        for attr in self:  # 遍历自身的所有attr # type: ignore
             registeredAttrName: str = attr.name  # 处理那些与保留关键字相同的attrName
             if registeredAttrName.startswith("_"):
                 registeredAttrName = registeredAttrName[1:]
@@ -47,12 +47,12 @@ class TCMLAttr:
                 if len(attrNames) == 1:  # 没有sub
                     if isInstanceOfAny(value, attr.value.get('type', object)):
                         return attrName, value
-                    warnings.warn(value, BadAttrTypeWarning)
+                    warnings.warn(str(value), BadAttrTypeWarning)
                     return AttrInvalid()
                 elif len(attrNames) == 2:  # 有sub
                     if not attr.value.get('subs', None):  # 但是那个attr没有sub
                         warnings.warn(attrNames[1], NoSubAttrWarning)
-                        warnings.warn(value, BadAttrNameWarning)
+                        warnings.warn(str(value), BadAttrNameWarning)
                         return AttrInvalid()
                     # 匹配sub
                     resolvedSubAttrs = []
@@ -62,7 +62,7 @@ class TCMLAttr:
                                                     subAttrValue.get('type', object)])  # sub名称, 优先级, sub类型
                     resolvedSubAttrs.sort(key=lambda item: item[1], reverse=True)  # 按优先级排序
                     if len(resolvedSubAttrs) == 0:  # 没有匹配到sub
-                        warnings.warn(value, BadAttrNameWarning)
+                        warnings.warn(str(value), BadAttrNameWarning)
                         return AttrInvalid()
                     if isInstanceOfAny(value, resolvedSubAttrs[0][2]):
                         return attrNames[0]+":"+resolvedSubAttrs[0][0], value
@@ -75,7 +75,7 @@ class TCMLAttr:
                             return AttrInvalid()
                         return attrNames[0]+":"+resolvedSubAttrs[0][0], v
                     else:
-                        warnings.warn(value, BadAttrTypeWarning)  # 类型不对
+                        warnings.warn(str(value), BadAttrTypeWarning)  # 类型不对
                         return AttrInvalid()
                 else:
                     raise TooManySubAttrError(len(attrNames))
@@ -116,7 +116,7 @@ class TCMLGenericAttrs(TCMLAttr, Enum):
 
 
 class TCMLScoreAttrs(TCMLAttr, Enum):
-    name = {'name': 'name', 'type': str}
+    _name = {'name': 'name', 'type': str}
     objective = {'name': 'objective', 'type': str}
 
 
@@ -150,7 +150,7 @@ class TCMLNBTAttrs(TCMLAttr, Enum):
 
 
 class TCMLClickAttrs(TCMLAttr, Enum):
-    value = {'name': 'value', 'type': str}
+    _value = {'name': 'value', 'type': str}
     action = {'name': 'action', 'type': None, 'subs': {
         'open_url': {'type': str, 'priority': 100},
         'run_command': {'type': str, 'priority': 80},
