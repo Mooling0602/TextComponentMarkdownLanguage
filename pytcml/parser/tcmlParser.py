@@ -107,10 +107,12 @@ class TCML_HTMLParser(HTMLParser):
         outAttrs = []
         isAttrValid = False
         for attr, value in attrs:
-            for attrsWillCheck in attrList:
+            for index, attrsWillCheck in enumerate(attrList):
                 validResult = TCMLGenericAttrs.valid(attrsWillCheck, attr, value)
                 if isinstance(validResult, AttrInvalid):
                     warnings.warn(attr, BadAttrWarning)
+                    if index != len(attrsWillCheck)-1:
+                        continue  # 还没有检查完
                     isAttrValid = False
                     break
                 else:
@@ -211,7 +213,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = '<text hover:item="item:123">Hover on me!</text>'
+f = '<utranslate key="abc">Hover on me!</utranslate>'
 print(f)
 p.feed(f)
 print(p.parsedContents)
