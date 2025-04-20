@@ -11,6 +11,9 @@ class Style:
     strikethrough: bool = None
     obfuscated: bool = None
 
+    def reset(self) -> 'Style':
+        return Style('white', 'uniform', False, False, False, False, False)
+
     def __repr__(self):
         result = "Style( "
         for style in fields(self):

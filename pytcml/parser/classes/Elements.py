@@ -15,7 +15,7 @@ class TCMLElements(TCMLElement, Enum):
     text = {'element': 'text', 'asProviderTarget': True}
     text_hover_text = {'element': 'text-hover-text', 'dataProvider': True,
                        'provideTarget': 'text', 'provideAttr': 'hover:text'}
-    score = {'element': 'score', 'attrs': TCMLScoreAttrs, 'asProviderTarget': True}
+    score = {'element': 'score', 'attrs': TCMLScoreAttrs}
     selector = {'element': 'selector', 'attrs': TCMLSelectorAttrs, 'asProviderTarget': True}
     selecor_separator = {'element': 'selector-separator',
                          'dataProvider': True, 'provideTarget': 'selector', 'provideAttr': 'selector'}

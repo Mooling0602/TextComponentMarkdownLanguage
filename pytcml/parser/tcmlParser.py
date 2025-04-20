@@ -15,19 +15,22 @@ class TCML_HTMLParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
 
-        self.depth = 0
-        self.tagStack = deque()
-        self.styleStack = deque([Style()])
-        self.attrStack = deque()
-        self.tagCheckStack = deque()
+        # 栈
+        self.depth = 0  # 解析深度，用于检查是否闭合特定标签
+        self.tagStack = deque()  # 检查标签是否配对
+        self.styleStack = deque([Style.reset(Style)])  # 继承style
+        self.attrStack = deque()  # 我也不知道啥用处，留着吧
+        self.tagCheckStack = deque()  # 和tagStack一样，但是它里面留的是原始标签名
 
-        self.inRaw = False
+        self.inRaw = False  # raw模式
         self.rawStartDepth = -1
         self.rawDatas = ""
 
-        self.inContentProvider = False
+        self.inContentProvider = False  # contentProvider模式
         self.provideStartDepth = -1
         self.provideContents: list[UnparsedTextComponent] = []
+
+        # 解析内容
         self.parsedContents: list[UnparsedTextComponent] = []
 
         if DEBUG:
@@ -63,16 +66,16 @@ class TCML_HTMLParser(HTMLParser):
         return result
 
     def handle_starttag(self, tag, attrs):
-        rtag = tag
+        rtag = tag  # 备份一份tag name
         self.depth += 1
         if DEBUG:
             print(f"{'(raw)' if self.inRaw else ''} Start tag: {tag} with depth: {self.depth} & {self.rawStartDepth}")
 
-        if self.inRaw:
+        if self.inRaw:  # 跳过后续解析
             self.rawDatas += self.get_starttag_text()
             return
 
-        style = Style()
+        style = Style()  # 空style
 
         # 处理标签名
         # 快速标签应用
@@ -132,7 +135,7 @@ class TCML_HTMLParser(HTMLParser):
                 case 'style':
                     for item in value.split(","):
                         if item.strip() == 'reset':
-                            style = Style('white', 'uniform', False, False, False, False, False)
+                            style = Style.reset(Style)
                         else:
                             setattr(style, item.strip(), True)
                 case 'font':
@@ -213,7 +216,7 @@ class TCML_HTMLParser(HTMLParser):
 
 
 p = TCML_HTMLParser()
-f = '<utranslate key="abc">Hover on me!</utranslate>'
+f = '<line>aaa</line>'
 print(f)
 p.feed(f)
 print(p.parsedContents)
