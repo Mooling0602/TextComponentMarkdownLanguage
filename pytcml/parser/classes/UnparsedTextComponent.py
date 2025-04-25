@@ -9,4 +9,4 @@ class UnparsedTextComponent:
 
     def __repr__(self):
         attrs = "".join([f'{attr}="{value}"' for attr, value in self.attrs])
-        return str(f"UPTC(<{self.tag} {attrs} {self.styles}>{self.value})")
+        return str(f"UPTC(<{self.tag} {attrs} {self.styles}>{self.value}))")

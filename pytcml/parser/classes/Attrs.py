@@ -115,12 +115,12 @@ class TCMLGenericAttrs(TCMLAttr, Enum):
         'text': {'type': str, 'priority': 100},
         'item': {'type': dict, 'priority': 50},
         'entity': {'type': dict, 'priority': 10},
+        'inheritable': True
     }}
-    raw = {'name': 'raw'}
-    _if = {'name': 'if', 'type': str}
-    _for = {'name': 'for', 'type': str}
-    else_if = {'name': 'else-if', 'type': str}
-    _else = {'name': 'else'}
+    _if = {'name': 'if', 'type': str, 'inheritable': True}
+    _for = {'name': 'for', 'type': str, 'inheritable': True}
+    else_if = {'name': 'else-if', 'type': str, 'inheritable': True}
+    _else = {'name': 'else', 'inheritable': True}
     reset = {'name': 'reset', 'type': bool}
 
 
@@ -165,4 +165,6 @@ class TCMLClickAttrs(TCMLAttr, Enum):
         'change_page': {'type': str, 'priority': 60},
         'suggest_command': {'type': str, 'priority': 40},
         'copy_to_clipboard': {'type': str, 'priority': 20},
-    }}
+    },
+        'inheritable': True
+    }
